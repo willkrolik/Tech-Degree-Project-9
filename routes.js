@@ -185,22 +185,28 @@ router.get('/users', authenticateUser, (req, res) => {
   const user = req.currentUser;
 
   res.json({
-    name: user.name,
-    username: user.username,
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    emailAddress: user.emailAddress,
   });
 });
 
 // Route that creates a new user.
 router.post('/users', [
-  check('name')
+  check('firstName')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage('Value required for "name"'),
-  check('username')
+    .withMessage('Value required for "first name"'),
+  check('lastName')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage('Value required for "username"'),
+    .withMessage('Value required for "last name"'),
   check('password')
     .exists({ checkNull: true, checkFalsy: true })
-    .withMessage('Value required for for "password"'),
+    .withMessage('Value required for "password"'),
+  check('emailAddress')
+    .exists({ checkNull: true, checkFalsy: true })
+    .withMessage('Value required for "emailAddress"'),
+
 ], (req, res) => {
   const errors = validationResult(req);
 
