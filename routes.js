@@ -1,9 +1,18 @@
+'use strict';
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const { Course, User } = require('./models');
 const bcrypt = require('bcryptjs');
+const auth = require('basic-auth');
 
+// This array is used to keep track of user records
+// as they are created.
+const users = [];
+
+const nameValidator = check('name')
+  .exists({ checkNull: true, checkFalsy: true })
+  .withMessage('Please provide a value for "name"');
 
 function asyncHandler(cb) {
   return async (req, res, next) => {
@@ -24,39 +33,53 @@ function asyncHandler(cb) {
 const authenticateUser = (req, res, next) => {
   let message = null;
 
- 
-  const credentials = { name: 'admin@project9.org', pass: 'password' };;
+  // Parse the user's credentials from the Authorization header.
+  const credentials = auth(req);
 
+  // If the user's credentials are available...
   if (credentials) {
-    User.findOne({
-      where: {
-        emailAddress: credentials.name
-      }
-    }).then((user) => {
-      // FIXME probably shouldn't log this at all
-      console.log('successfully loaded user', JSON.stringify(user));
+    // Attempt to retrieve the user from the data store
+    // by their username (i.e. the user's "key"
+    // from the Authorization header).
+    const user = users.find(u => u.username === credentials.name);
 
-      const authenticated = bcrypt.compareSync(credentials.pass, user.password);
+    // If a user was successfully retrieved from the data store...
+    if (user) {
+      // Use the bcryptjs npm package to compare the user's password
+      // (from the Authorization header) to the user's password
+      // that was retrieved from the data store.
+      const authenticated = bcryptjs
+        .compareSync(credentials.pass, user.password);
+
+      // If the passwords match...
       if (authenticated) {
-        console.log(`Authentication successful for username: ${user.emailAddress}`);
-        // Store the user on the Request object.
+        console.log(`Authentication successful for username: ${user.username}`);
+
+        // Then store the retrieved user object on the request object
+        // so any middleware functions that follow this middleware function
+        // will have access to the user's information.
         req.currentUser = user;
       } else {
-        message = `Authentication failure for username: ${user.emailAddress}`;
+        message = `Authentication failure for username: ${user.username}`;
       }
-    }, () => {
-      console.warn('could not find user in database for auth', credentials.name);
+    } else {
       message = `User not found for username: ${credentials.name}`;
-    }).finally(() => {
-      if (message) {
-        console.warn(message);
-        res.status(401).json({ message: 'Access Denied' });
-      } else {
-        next();
-      }
-    });
+    }
+  } else {
+    message = 'Auth header not found';
   }
 
+  // If user authentication failed...
+  if (message) {
+    console.warn(message);
+
+    // Return a response with a 401 Unauthorized HTTP status code.
+    res.status(401).json({ message: 'Access Denied' });
+  } else {
+    // Or if user authentication succeeded...
+    // Call the next() method.
+    next();
+  }
 };
 
 
@@ -203,17 +226,17 @@ router.post('/users', [
  
   const user = req.body;
 
+  // Add the user to the `users` array.
+  
   
   user.password = bcrypt.hashSync(user.password);
 
+  users.push(user);
   
-  Users.create(user).then((user, created) => {
+  
     
-    return res.status(201).end();
-  }).catch(err => {
-    return res.status(422).end();
-  });
-
+  return res.status(201).end();
+  
 
 });
 
