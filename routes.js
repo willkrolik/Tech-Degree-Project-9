@@ -30,7 +30,7 @@ function asyncHandler(cb) {
  * @param {Response} res - The Express Response object.
  * @param {Function} next - The function to call to pass execution to the next middleware.
  */
-const authenticateUser = (req, res, next) => {
+const authenticateUser = async(req, res, next) => {
   let message = null;
 
   // Parse the user's credentials from the Authorization header.
@@ -38,10 +38,11 @@ const authenticateUser = (req, res, next) => {
 
   if (credentials) {
     // Look for a user whose `username` matches the credentials `name` property.
-    const user = users.find(u => u.username === credentials.name);
+    //const user = users.find(u => u.username === credentials.name);
+     await User.findOne({where: { emailAddress : credentials.name } }).then( user => {
 
     if (user) {
-      const authenticated = bcryptjs
+      const authenticated = bcrypt
         .compareSync(credentials.pass, user.password);
       if (authenticated) {
         console.log(`Authentication successful for username: ${user.username}`);
@@ -51,9 +52,13 @@ const authenticateUser = (req, res, next) => {
       } else {
         message = `Authentication failure for username: ${user.username}`;
       }
-    } else {
+    } 
+    
+    
+    else {
       message = `User not found for username: ${credentials.name}`;
-    }
+    } 
+  })
   } else {
     message = 'Auth header not found';
   }
