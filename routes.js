@@ -6,10 +6,6 @@ const { Course, User } = require('./models');
 const bcrypt = require('bcryptjs');
 const auth = require('basic-auth');
 
-// This array is used to keep track of user records
-// as they are created.
-const users = [];
-
 const nameValidator = check('name')
   .exists({ checkNull: true, checkFalsy: true })
   .withMessage('Please provide a value for "name"');
@@ -37,30 +33,26 @@ const authenticateUser = async(req, res, next) => {
   const credentials = auth(req);
 
   if (credentials) {
-    // Look for a user whose `username` matches the credentials `name` property.
-    //const user = users.find(u => u.username === credentials.name);
      await User.findOne({where: { emailAddress : credentials.name } }).then( user => {
 
     if (user) {
       const authenticated = bcrypt
         .compareSync(credentials.pass, user.password);
       if (authenticated) {
-        console.log(`Authentication successful for username: ${user.username}`);
-
+        console.log(`Success for ${user.firstName} ${user.lastName}!`);
         // Store the user on the Request object.
         req.currentUser = user;
       } else {
-        message = `Authentication failure for username: ${user.username}`;
+        message = `Could not locate ${user.firstName} ${user.lastName} in the system`;
       }
     } 
     
-    
     else {
-      message = `User not found for username: ${credentials.name}`;
+      message = `Could not locate ${credentials.name} in the system`;
     } 
   })
   } else {
-    message = 'Auth header not found';
+    message = 'Header not found';
   }
 
   if (message) {
@@ -131,13 +123,11 @@ router.put('/courses/:id', [
 ], authenticateUser, asyncHandler(async (req, res, next) => {
   const user = req.currentUser.id;
 
-
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
 
     const errorMessages = errors.array().map(error => error.msg);
-
 
     res.status(400).json({ errors: errorMessages });
   } else {
@@ -216,22 +206,10 @@ router.post('/users', [
     
     return res.status(400).json({ errors: errorMessages });
   }
-
- 
-  const user = req.body;
-
-  // Add the user to the `users` array.
-  
-  
   user.password = bcrypt.hashSync(user.password);
 
-  users.push(user);
-  
-  
-    
   return res.status(201).end();
   
-
 });
 
 module.exports = router;
