@@ -213,8 +213,10 @@ router.post('/users', [
     await User.create(user)
     .then(user=> {
 
-      // Set location to '/' route (the root route)
-              res.location = '/users';
+  users.push(user);
+    
+  return res.status(201).end();
+  
 
       // Set the status to 201
               res.status(201).end();
