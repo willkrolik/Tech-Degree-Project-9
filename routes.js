@@ -6,6 +6,8 @@ const { Course, User } = require('./models');
 const bcrypt = require('bcryptjs');
 const auth = require('basic-auth');
 
+const users = [];
+
 const nameValidator = check('name')
   .exists({ checkNull: true, checkFalsy: true })
   .withMessage('Please provide a value for "name"');
@@ -197,7 +199,7 @@ router.post('/users', [
     .exists({ checkNull: true, checkFalsy: true })
     .withMessage('Value required for "emailAddress"'),
 
-], (req, res) => {
+], asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -205,11 +207,20 @@ router.post('/users', [
 
     
     return res.status(400).json({ errors: errorMessages });
-  }
-  user.password = bcrypt.hashSync(user.password);
+  } else {
+    const user = req.body;
+    user.password = bcrypt.hashSync(user.password);
+    await User.create(user)
+    .then(user=> {
 
-  return res.status(201).end();
-  
-});
+      // Set location to '/' route (the root route)
+              res.location = '/users';
+
+      // Set the status to 201
+              res.status(201).end();
+            })
+          }
+        })
+      )
 
 module.exports = router;
