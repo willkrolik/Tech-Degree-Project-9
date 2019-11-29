@@ -6,6 +6,8 @@ const { Course, User } = require('./models');
 const bcrypt = require('bcryptjs');
 const auth = require('basic-auth');
 
+// This array is used to keep track of user records
+// as they are created.
 const users = [];
 
 const nameValidator = check('name')
@@ -35,26 +37,30 @@ const authenticateUser = async(req, res, next) => {
   const credentials = auth(req);
 
   if (credentials) {
+    // Look for a user whose `username` matches the credentials `name` property.
+    //const user = users.find(u => u.username === credentials.name);
      await User.findOne({where: { emailAddress : credentials.name } }).then( user => {
 
     if (user) {
       const authenticated = bcrypt
         .compareSync(credentials.pass, user.password);
       if (authenticated) {
-        console.log(`Success for ${user.firstName} ${user.lastName}!`);
+        console.log(`Success for username: ${user.username}`);
+
         // Store the user on the Request object.
         req.currentUser = user;
       } else {
-        message = `Could not locate ${user.firstName} ${user.lastName} in the system`;
+        message = `${user.username} not found`;
       }
     } 
     
+    
     else {
-      message = `Could not locate ${credentials.name} in the system`;
+      message = `User not found for username: ${credentials.name}`;
     } 
   })
   } else {
-    message = 'Header not found';
+    message = 'Auth header not found';
   }
 
   if (message) {
@@ -125,11 +131,13 @@ router.put('/courses/:id', [
 ], authenticateUser, asyncHandler(async (req, res, next) => {
   const user = req.currentUser.id;
 
+
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
 
     const errorMessages = errors.array().map(error => error.msg);
+
 
     res.status(400).json({ errors: errorMessages });
   } else {
@@ -199,7 +207,7 @@ router.post('/users', [
     .exists({ checkNull: true, checkFalsy: true })
     .withMessage('Value required for "emailAddress"'),
 
-], asyncHandler(async (req, res, next) => {
+], (req, res) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -207,22 +215,21 @@ router.post('/users', [
 
     
     return res.status(400).json({ errors: errorMessages });
-  } else {
-    const user = req.body;
-    user.password = bcrypt.hashSync(user.password);
-    await User.create(user)
-    .then(user=> {
+  }
+
+ 
+  const user = req.body;
+
+  // Add the user to the `users` array.
+  
+  
+  user.password = bcrypt.hashSync(user.password);
 
   users.push(user);
     
   return res.status(201).end();
   
 
-      // Set the status to 201
-              res.status(201).end();
-            })
-          }
-        })
-      )
+});
 
 module.exports = router;
