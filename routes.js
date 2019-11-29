@@ -50,7 +50,7 @@ const authenticateUser = async(req, res, next) => {
         // Store the user on the Request object.
         req.currentUser = user;
       } else {
-        message = `Authentication failure for username: ${user.username}`;
+        message = `username: ${user.username} not found`;
       }
     } 
     
@@ -226,8 +226,6 @@ router.post('/users', [
   user.password = bcrypt.hashSync(user.password);
 
   users.push(user);
-  
-  
     
   return res.status(201).end();
   
