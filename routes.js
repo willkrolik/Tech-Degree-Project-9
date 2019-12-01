@@ -181,7 +181,7 @@ router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res, ne
 }))
 
 // returns current user 
-router.get('/users', authenticateUser, (req, res) => {
+router.get('/users', authenticateUser, asyncHandler(async(req, res) => {
   const user = req.currentUser;
 
   res.json({
@@ -190,9 +190,11 @@ router.get('/users', authenticateUser, (req, res) => {
     lastName: user.lastName,
     emailAddress: user.emailAddress,
   });
-});
+  res.status(200);
+  res.end();
+}));
 
-// Route that creates a new user.
+// Route that creates a new user, original code credit to ISimpson
 router.post('/users', [
   check('firstName')
     .exists({ checkNull: true, checkFalsy: true })
@@ -206,30 +208,39 @@ router.post('/users', [
   check('emailAddress')
     .exists({ checkNull: true, checkFalsy: true })
     .withMessage('Value required for "emailAddress"'),
-
-], (req, res) => {
-  const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => error.msg);
-
-    
-    return res.status(400).json({ errors: errorMessages });
-  }
-
- 
-  const user = req.body;
-
-  // Add the user to the `users` array.
-  
-  
-  user.password = bcrypt.hashSync(user.password);
-
-  users.push(user);
-    
-  return res.status(201).end();
-  
-
-});
+    // Validates if each value exists, next steps would be to add more specific validation (length, etc.)
+], asyncHandler(
+  async (req, res) => {
+    const errors = validationResult(req);
+   // If there are no errors, add this value to the array
+    if (!errors.isEmpty()) {
+      const errorMessages = errors.array().map(error => error.msg);
+      res.status(400).json({errors: errorMessages});
+    } else {
+      let users = await User.findAll({});
+      const user = users.find(u => u.emailAddress === req.body.emailAddress);
+      // validate if the email address provided isn't already in the system 
+      if (!user) {
+        let password = req.body.password;
+        let hashedPassword = bcrypt.hashSync(password, 10);
+        // hash out the provided password to the power of 10
+        const newUser = {
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          emailAddress: req.body.emailAddress,
+          password: hashedPassword
+        };
+        // Use findOrCreate to create new user 
+        User.findOrCreate({where: newUser});
+        res.status(201).end();
+      } else {
+        // Returns error if the value already exists 
+        res.status(400).json({
+          errors: "Email already exists in our system"
+        });
+      }
+    }
+  })
+);
 
 module.exports = router;
