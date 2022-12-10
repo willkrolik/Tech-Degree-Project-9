@@ -11,15 +11,15 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "express": "^4.13.4",
+    "express": "^4.18.2",
     "nodemon": "^1.18.3"
   },
   "dependencies": {
     "basic-auth": "^2.0.1",
     "bcryptjs": "^2.4.3",
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.1",
     "cross-env": "^5.2.0",
-    "express": "~4.13.4",
+    "express": "~4.18.2",
     "express-validator": "^6.3.0",
     "morgan": "^1.9.0",
     "mysql2": "^2.0.0",
